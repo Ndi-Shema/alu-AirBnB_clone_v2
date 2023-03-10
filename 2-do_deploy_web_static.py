@@ -36,22 +36,27 @@ def do_deploy(archive_path):
     if run("mkdir -p /data/web_static/releases/{}/".format(name)).failed:
         return False
 
-    # Getting the content of the archive to the directory and remove the archive
-    if run("tar -xzf /tmp/{} -C /data/web_static/releases/{}/".format(archive_file, name)).failed:
+    # Getting the content of the archive to the directory and removing it
+    if run("tar -xzf /tmp/{} -C /data/web_static/releases/{}/"
+           .format(archive_file, name)).failed:
         return False
     if run("rm /tmp/{}".format(archive_file)).failed:
         return False
 
     # Move the contents of the web_static directory to the release directory
-    if run("mv /data/web_static/releases/{}/web_static/* /data/web_static/releases/{}/".format(name, name)).failed:
+    if run("mv /data/web_static/releases/{}/web_static/* /data/web_static/releases/{}/"
+           .format(name, name)).failed:
         return False
 
-    # Remove the web_static directory and create a symbolic link to the new release
-    if run("rm -rf /data/web_static/releases/{}/web_static".format(name)).failed:
+    # Remove the web_static directory 
+    # create a symbolic link to the new release
+    if run("rm -rf /data/web_static/releases/{}/web_static"
+           .format(name)).failed:
         return False
     if run("rm -rf /data/web_static/current").failed:
         return False
-    if run("ln -s /data/web_static/releases/{}/ /data/web_static/current".format(name)).failed:
+    if run("ln -s /data/web_static/releases/{}/ /data/web_static/current"
+           .format(name)).failed:
         return False
 
     # Return True if successful
