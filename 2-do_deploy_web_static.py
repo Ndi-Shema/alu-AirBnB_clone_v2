@@ -1,8 +1,12 @@
 #!/usr/bin/python3
+""" Compress the web_static folder and save the archive
+    in the versions folder with a timestamp."""
+
 import os
 import datetime
 from fabric import Connection
 from invoke import Responder
+
 
 env = {'hosts': ['75.101.238.212', '54.85.162.84'], 'user': 'ubuntu', 'key_filename': '~/.ssh/id_rsa'}
 
