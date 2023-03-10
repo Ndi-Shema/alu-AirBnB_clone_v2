@@ -24,7 +24,7 @@ sudo ln -sf /data/web_static/releases/test /data/web_static/current
 sudo chown -R ubuntu:ubuntu /data
 
 # Configure Nginx to serve the static file
-sudo sed -i '/server_name _;/a \ \n    location /hbnb_static {\n        alias /data/web_static/current/;\n    }' /etc/nginx/sites-available/default
+sudo sed -i '37i\\n\tlocation /hbnb_static {\n        alias /data/web_static/current/;\n    }' /etc/nginx/sites-available/default
 
 # Restart Nginx
 sudo service nginx restart
