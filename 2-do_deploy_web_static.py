@@ -44,11 +44,11 @@ def do_deploy(archive_path):
         return False
 
     # Move the contents of the web_static directory to the release directory
-    if run("mv /data/web_static/releases/{}/web_static/* /data/web_static/releases/{}/"
-           .format(name, name)).failed:
+    if run("mv /data/web_static/releases/{}/web_static/* /data/web_static
+           /releases/{}/".format(name, name)).failed:
         return False
 
-    # Remove the web_static directory 
+    # Remove the web_static directory
     # create a symbolic link to the new release
     if run("rm -rf /data/web_static/releases/{}/web_static"
            .format(name)).failed:
