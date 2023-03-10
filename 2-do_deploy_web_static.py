@@ -1,52 +1,49 @@
 #!/usr/bin/python3
-# Compress the web_static folder and save the archive in the versions folder with a timestamp.
-import os
-import datetime
+# Fabfile to distribute an archive to a web server.
+import os.path
 from fabric import Connection
-from invoke import Responder
 
-env = {'hosts': ['75.101.238.212', '54.85.162.84'], 'user': 'ubuntu', 'key_filename': '~/.ssh/id_rsa'}
+env.hosts = ["75.101.238.212", "54.85.162.84"]
 
-def do_pack():
-    now = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-    filename = f"web_static_{now}.tgz"
-    os.system("mkdir -p versions")
-    os.system(f"tar -czvf versions/{filename} web_static/")
-    return f"versions/{filename}"
 
 def do_deploy(archive_path):
-    if not os.path.isfile(archive_path):
+    """Distributes an archive to a web server.
+    Args:
+        archive_path (str): The path of the archive to distribute.
+    Returns:
+        If the file doesn't exist at archive_path or an error occurs - False.
+        Otherwise - True.
+    """
+    if os.path.isfile(archive_path) is False:
         return False
+    file = archive_path.split("/")[-1]
+    name = file.split(".")[0]
 
-    with Connection(env.hosts[0], user=env['user'], connect_kwargs={"key_filename": env['key_filename']}) as conn:
-        put_result = conn.put(archive_path, "/tmp/")
-        if put_result.failed:
+    with Connection(env.hosts[0]) as conn:
+        put_result = conn.put(archive_path, "/tmp/{}".format(file))
+        if put_result.failed is True:
             return False
 
-    with Connection(env.hosts[0], user=env['user'], connect_kwargs={"key_filename": env['key_filename']}) as conn:
-        name = archive_path.split("/")[-1].split(".")[0]
-        remote_path = f"/data/web_static/releases/{name}"
-        if conn.run(f"mkdir -p {remote_path}").failed:
+        if conn.run("rm -rf /data/web_static/releases/{}/".
+           format(name)).failed is True:
             return False
-
-    with Connection(env.hosts[0], user=env['user'], connect_kwargs={"key_filename": env['key_filename']}) as conn:
-        if conn.run(f"tar -xzf /tmp/{name}.tgz -C {remote_path}").failed:
+        if conn.run("mkdir -p /data/web_static/releases/{}/".
+           format(name)).failed is True:
             return False
-
-    with Connection(env.hosts[0], user=env['user'], connect_kwargs={"key_filename": env['key_filename']}) as conn:
-        if conn.run(f"rm /tmp/{name}.tgz").failed:
+        if conn.run("tar -xzf /tmp/{} -C /data/web_static/releases/{}/".
+           format(file, name)).failed is True:
             return False
-
-    with Connection(env.hosts[0], user=env['user'], connect_kwargs={"key_filename": env['key_filename']}) as conn:
-        if conn.run(f"mv {remote_path}/web_static/* {remote_path}").failed:
+        if conn.run("rm /tmp/{}".format(file)).failed is True:
             return False
-
-    with Connection(env.hosts[0], user=env['user'], connect_kwargs={"key_filename": env['key_filename']}) as conn:
-        if conn.run(f"rm -rf /data/web_static/current").failed:
+        if conn.run("mv /data/web_static/releases/{}/web_static/* "
+           "/data/web_static/releases/{}/".format(name, name)).failed is True:
             return False
-
-    with Connection(env.hosts[0], user=env['user'], connect_kwargs={"key_filename": env['key_filename']}) as conn:
-        if conn.run(f"ln -s {remote_path} /data/web_static/current").failed:
+        if conn.run("rm -rf /data/web_static/releases/{}/web_static".
+           format(name)).failed is True:
             return False
-
-    return True
+        if conn.run("rm -rf /data/web_static/current").failed is True:
+            return False
+        if conn.run("ln -s /data/web_static/releases/{}/ /data/web_static/current".
+           format(name)).failed is True:
+            return False
+        return True
