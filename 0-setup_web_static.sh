@@ -15,7 +15,7 @@ echo "<html>
   <body>
     Test this Nginx
   </body>
-</html>" | sudo tee /data/web_static/releases/test/index.html
+</html>" >/data/web_static/releases/test/index.html
 
 # Create a symbolic link
 sudo ln -sf /data/web_static/releases/test /data/web_static/current
