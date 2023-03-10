@@ -1,4 +1,3 @@
-Copy code
 #!/usr/bin/python3
 # This fabfile is used to deploy an archive to a web server.
 import os.path
