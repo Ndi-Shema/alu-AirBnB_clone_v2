@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-
+"""Deploying archives to the server"""
 import datetime
 import os
 import shutil
