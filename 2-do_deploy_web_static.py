@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-
 # deploying archives into the server
 import os
 import datetime
