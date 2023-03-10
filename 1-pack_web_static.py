@@ -18,7 +18,3 @@ def do_pack():
     command = "tar -cvzf {} web_static".format(archive_path)
     result = local(command)
 
-    if resultfailed:
-        return None
-    else:
-        return archive_path
