@@ -25,7 +25,7 @@ def do_deploy(archive_path):
     """deploying the saved archives"""
     if not os.path.isfile(archive_path):
         return False
-
+    #trying to upload all the archive names to the server
     archive_filename = os.path.splitext(os.path.basename(archive_path))[0]
     archive_remote_path = f"/tmp/{archive_filename}.tgz"
     try:
