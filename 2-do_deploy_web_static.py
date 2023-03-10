@@ -1,78 +1,77 @@
 #!/usr/bin/python3
-"""Deploying archives to the server"""
-import datetime
+"""Comment"""
+from fabric.api import *
 import os
-import shutil
-import subprocess
+import re
+from datetime import datetime
 
-from fabric import Connection
+env.user = 'ubuntu'
+env.hosts = ['75.101.238.212', '54.85.162.84']
 
 
-# Server configuration
-SERVERS = ['75.101.238.212', '54.85.162.84']
-REMOTE_USER = 'ubuntu'
-REMOTE_DIR = '/data/web_static'
-CURRENT_LINK = os.path.join(REMOTE_DIR, 'current')
-BACKUP_DIR = os.path.join(REMOTE_DIR, 'backups')
-
- """Create a compressed archive of the web_static directory."""
 def do_pack():
-    
-    timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
-    archive_name = f'web_static_{timestamp}.tgz'
-    local_dir = os.path.abspath('web_static')
-    local_archive = os.path.join(os.path.abspath('versions'), archive_name)
-
-    os.makedirs(os.path.dirname(local_archive), exist_ok=True)
-
-    with subprocess.Popen(
-            ['tar', '-czf', local_archive, '-C', local_dir, '.'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-    ) as proc:
-        out, err = proc.communicate()
-
-    if proc.returncode != 0:
-        print(f'Error creating archive: {err.decode()}')
+    """Comm"""
+    local("mkdir -p versions")
+    result = local("tar -cvzf versions/web_static_{}.tgz web_static"
+                   .format(datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")),
+                   capture=True)
+    if result.failed:
         return None
+    return result
 
-    print(f'Created archive: {local_archive}')
-    return local_archive
 
-"""Upload and extract the archive on the remote server."""
 def do_deploy(archive_path):
-    
+    """Comment"""
     if not os.path.isfile(archive_path):
-        print(f'Archive not found: {archive_path}')
         return False
 
-    archive_name = os.path.basename(archive_path)
-    remote_archive = os.path.join('/tmp', archive_name)
-    c = Connection(REMOTE_USER, SERVERS[0])
+    filename_regex = re.compile(r'[^/]+(?=\.tgz$)')
+    match = filename_regex.search(archive_path)
 
-    # Create backups directory if it doesn't exist
-    c.run(f'mkdir -p {BACKUP_DIR}')
+    # Upload the archive to the /tmp/ directory of the web server
+    archive_filename = match.group(0)
+    result = put(archive_path, "/tmp/{}.tgz".format(archive_filename))
+    if result.failed:
+        return False
+    # Uncompress the archive to the folder
+    #     /data/web_static/releases/<archive filename without extension> on
+    #     the web server
 
-    # Upload archive to remote server
-    c.put(archive_path, remote_archive)
+    result = run(
+        "mkdir -p /data/web_static/releases/{}/".format(archive_filename))
+    if result.failed:
+        return False
+    result = run("tar -xzf /tmp/{}.tgz -C /data/web_static/releases/{}/"
+                 .format(archive_filename, archive_filename))
+    if result.failed:
+        return False
 
-    # Extract archive to temporary directory
-    temp_dir = os.path.join(REMOTE_DIR, 'tmp')
-    c.run(f'mkdir -p {temp_dir}')
-    c.run(f'tar -xzf {remote_archive} -C {temp_dir}')
+    # Delete the archive from the web server
+    result = run("rm /tmp/{}.tgz".format(archive_filename))
+    if result.failed:
+        return False
+    result = run("mv /data/web_static/releases/{}"
+                 "/web_static/* /data/web_static/releases/{}/"
+                 .format(archive_filename, archive_filename))
+    if result.failed:
+        return False
+    result = run("rm -rf /data/web_static/releases/{}/web_static"
+                 .format(archive_filename))
+    if result.failed:
+        return False
 
-    # Create new release directory and move files
-    release_dir = os.path.join(REMOTE_DIR, 'releases', archive_name[:-4])
-    c.run(f'mkdir -p {release_dir}')
-    c.run(f'mv {temp_dir}/web_static/* {release_dir}')
+    # Delete the symbolic link /data/web_static/current from the web server
+    result = run("rm -rf /data/web_static/current")
+    if result.failed:
+        return False
 
-    # Remove temporary directory and archive
-    c.run(f'rm -rf {temp_dir}')
-    c.run(f'rm {remote_archive}')
+    #  Create a new the symbolic link
+    #  /data/web_static/current on the web server,
+    #     linked to the new version of your code
+    #     (/data/web_static/releases/<archive filename without extension>)
+    result = run("ln -s /data/web_static/releases/{}/ /data/web_static/current"
+                 .format(archive_filename))
+    if result.failed:
+        return False
 
-    # Update symbolic link
-    c.run(f'rm -f {CURRENT_LINK}')
-    c.run(f'ln -s {release_dir} {CURRENT_LINK}')
-
-    print('Deployment successful!')
     return True
