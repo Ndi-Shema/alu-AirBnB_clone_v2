@@ -1,19 +1,13 @@
 #!/usr/bin/python3
-# Fabfile to distribute an archive to a web server.
-  """Distributes an archive to a web server.
-    Args:
-        archive_path (str): The path of the archive to distribute.
-    Returns:
-        If the file doesn't exist at archive_path or an error occurs - False.
-        Otherwise - True.
-    """
 import os.path
 from fabric import Connection
 
 env.hosts = ["75.101.238.212", "54.85.162.84"]
 
 
-def do_deploy(archive_path):  
+def do_deploy(archive_path): 
+  """deploying archives to the server."""
+  
     if os.path.isfile(archive_path) is False:
         return False
     file = archive_path.split("/")[-1]
