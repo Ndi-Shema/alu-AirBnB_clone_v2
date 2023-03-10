@@ -16,8 +16,9 @@ def do_pack():
     archive_path = "versions/web_static_{}.tgz".format(timestamp)
 
     command = "tar -cvzf {} web_static".format(archive_path)
+    result = local(command)
 
-    if result.failed:
+    if resultfailed:
         return None
     else:
         return archive_path
