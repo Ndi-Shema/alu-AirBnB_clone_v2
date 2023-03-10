@@ -1,65 +1,59 @@
+Copy code
 #!/usr/bin/python3
-import os
-import datetime
-from fabric import Connection
-from invoke import Responder
+# This fabfile is used to deploy an archive to a web server.
+import os.path
+from fabric.api import env, put, run
 
-env = {'hosts': ['3.90.33.22', '54.146.239.233'], 'user': 'ubuntu', 'key_filename': '~/.ssh/id_rsa'}
+# Set hosts to distribute archive
+env.hosts = ["75.101.238.212", "54.85.162.84"]
 
-def do_pack():
-    """
-    Compress the web_static folder and save the archive
-    in the versions folder with a timestamp.
-    """
-    now = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-    filename = f"web_static_{now}.tgz"
-    local("mkdir -p versions")
-    local(f"tar -czvf versions/{filename} web_static/")
-    return f"versions/{filename}"
 
 def do_deploy(archive_path):
     """
-    Distribute the archive to the web servers.
+    Distributes an archive to a web server.
+
+    Args:
+        archive_path (str): The path of the archive to distribute.
+
+    Returns:
+        True if successful, False otherwise.
     """
+
+    # Check if the archive file exists
     if not os.path.isfile(archive_path):
         return False
 
-    # Upload archive to remote server
-    with Connection(env.hosts[0], user=env.user, connect_kwargs={"key_filename": env.key_filename}) as conn:
-        put_result = conn.put(archive_path, "/tmp/")
-        if put_result.failed:
-            return False
+    # Extract the archive file name and directory name
+    archive_file = archive_path.split("/")[-1]
+    name = archive_file.split(".")[0]
 
-    # Create remote directory to store the files
-    with Connection(env.hosts[0], user=env.user, connect_kwargs={"key_filename": env.key_filename}) as conn:
-        name = archive_path.split("/")[-1].split(".")[0]
-        remote_path = f"/data/web_static/releases/{name}"
-        if conn.run(f"mkdir -p {remote_path}").failed:
-            return False
+    # Upload the archive to the /tmp directory on the web server
+    if put(archive_path, "/tmp/{}".format(archive_file)).failed:
+        return False
 
-    # Extract files from the archive
-    with Connection(env.hosts[0], user=env.user, connect_kwargs={"key_filename": env.key_filename}) as conn:
-        if conn.run(f"tar -xzf /tmp/{name}.tgz -C {remote_path}").failed:
-            return False
+    # Remove any existing release directory and create a new one
+    if run("rm -rf /data/web_static/releases/{}/".format(name)).failed:
+        return False
+    if run("mkdir -p /data/web_static/releases/{}/".format(name)).failed:
+        return False
 
-    # Delete archive from the remote server
-    with Connection(env.hosts[0], user=env.user, connect_kwargs={"key_filename": env.key_filename}) as conn:
-        if conn.run(f"rm /tmp/{name}.tgz").failed:
-            return False
+    # Extract the contents of the archive to the release directory and remove the archive
+    if run("tar -xzf /tmp/{} -C /data/web_static/releases/{}/".format(archive_file, name)).failed:
+        return False
+    if run("rm /tmp/{}".format(archive_file)).failed:
+        return False
 
-    # Move files to the final location
-    with Connection(env.hosts[0], user=env.user, connect_kwargs={"key_filename": env.key_filename}) as conn:
-        if conn.run(f"mv {remote_path}/web_static/* {remote_path}").failed:
-            return False
+    # Move the contents of the web_static directory to the release directory
+    if run("mv /data/web_static/releases/{}/web_static/* /data/web_static/releases/{}/".format(name, name)).failed:
+        return False
 
-    # Remove old symlink
-    with Connection(env.hosts[0], user=env.user, connect_kwargs={"key_filename": env.key_filename}) as conn:
-        if conn.run(f"rm -rf /data/web_static/current").failed:
-            return False
+    # Remove the web_static directory and create a symbolic link to the new release
+    if run("rm -rf /data/web_static/releases/{}/web_static".format(name)).failed:
+        return False
+    if run("rm -rf /data/web_static/current").failed:
+        return False
+    if run("ln -s /data/web_static/releases/{}/ /data/web_static/current".format(name)).failed:
+        return False
 
-    # Create new symlink
-    with Connection(env.hosts[0], user=env.user, connect_kwargs={"key_filename": env.key_filename}) as conn:
-        if conn.run(f"ln -s {remote_path} /data/web_static/current").failed:
-            return False
-
+    # Return True if successful
     return True
