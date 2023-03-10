@@ -36,7 +36,7 @@ def do_deploy(archive_path):
     if run("mkdir -p /data/web_static/releases/{}/".format(name)).failed:
         return False
 
-    # Extract the contents of the archive to the release directory and remove the archive
+    # Getting the content of the archive to the directory and remove the archive
     if run("tar -xzf /tmp/{} -C /data/web_static/releases/{}/".format(archive_file, name)).failed:
         return False
     if run("rm /tmp/{}".format(archive_file)).failed:
