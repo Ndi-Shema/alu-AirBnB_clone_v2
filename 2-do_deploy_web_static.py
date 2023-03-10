@@ -15,9 +15,9 @@ REMOTE_DIR = '/data/web_static'
 CURRENT_LINK = os.path.join(REMOTE_DIR, 'current')
 BACKUP_DIR = os.path.join(REMOTE_DIR, 'backups')
 
-
+ """Create a compressed archive of the web_static directory."""
 def do_pack():
-    """Create a compressed archive of the web_static directory."""
+    
     timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
     archive_name = f'web_static_{timestamp}.tgz'
     local_dir = os.path.abspath('web_static')
@@ -39,9 +39,9 @@ def do_pack():
     print(f'Created archive: {local_archive}')
     return local_archive
 
-
+"""Upload and extract the archive on the remote server."""
 def do_deploy(archive_path):
-    """Upload and extract the archive on the remote server."""
+    
     if not os.path.isfile(archive_path):
         print(f'Archive not found: {archive_path}')
         return False
