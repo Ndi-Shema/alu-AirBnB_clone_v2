@@ -1,24 +1,32 @@
 #!/usr/bin/env bash
-# Check if nginx is installed, and install it if not
-if ! dpkg -s nginx &> /dev/null; then
-  sudo apt-get update
-  sudo apt-get -y install nginx
-fi
 
-# Create directories for web static content
-sudo mkdir -p /var/www/html/hbnb_static/releases/test/
-sudo mkdir -p /var/www/html/hbnb_static/shared/
+'Update the package list and install Nginx'
 
-# Create a symbolic link for web static content
-sudo ln -sf /var/www/html/hbnb_static/releases/test/ /var/www/html/hbnb_static/current
+sudo apt update
+sudo apt install -y nginx
 
-# Create an index.html file with test content
-sudo sh -c 'echo "<html><head><title>Test page</title></head><body><p>This is a test page.</p></body></html>" > /var/www/html/hbnb_static/releases/test/index.html'
+# Create directories if they don't exist
+sudo mkdir -p /data/web_static/releases/test
+sudo mkdir -p /data/web_static/shared
 
-# Set ownership for directories
-sudo chown -R www-data:www-data /var/www/html/hbnb_static
+# Create a basic HTML file
+echo "<html>
+  <head>
+  </head>
+  <body>
+    Holberton School
+  </body>
+</html>" | sudo tee /data/web_static/releases/test/index.html
 
-# Add location block for web static content to the nginx config
-sudo sh -c 'echo "location /hbnb_static/ {\n\talias /var/www/html/hbnb_static/current/;\n}\n" > /etc/nginx/sites-available/hbnb_static'
-sudo ln -sf /etc/nginx/sites-available/hbnb_static /etc/nginx/sites-enabled/hbnb_static
-sudo nginx -t && sudo systemctl reload nginx
+# Create a symbolic link
+sudo ln -sf /data/web_static/releases/test /data/web_static/current
+
+# Set ownership and permissions
+sudo chown -R ubuntu:ubuntu /data
+sudo chmod -R 755 /data
+
+# Configure Nginx to serve the static file
+sudo sed -i '/server_name _;/a \ \n    location /hbnb_static {\n        alias /data/web_static/current/;\n    }' /etc/nginx/sites-available/default
+
+# Restart Nginx
+sudo service nginx restart
